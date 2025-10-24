@@ -812,24 +812,34 @@ void ezdataServiceTask() {
         return ;
     }
 
-    if (registeredDevice(mac, db.ezdata2.loginName, db.ezdata2.password, db.ezdata2.devToken)) {
-        log_w("registeredDevice success");
+    // Try new self-registration endpoint first
+    if (registerDevice(mac, "AirQ", db.ezdata2.devToken)) {
+        log_w("registerDevice success - device registered with new endpoint");
+        ezdataStatus = true;
     } else {
-        log_w("registeredDevice error");
-        log_i("Login ...");
-        db.ezdata2.loginName = "USER_" + mac;
-        db.ezdata2.password = "12345678";
-        if (login(db.ezdata2.loginName, db.ezdata2.password, db.ezdata2.devToken)) {
-            log_w("login success");
+        log_w("registerDevice failed, trying old endpoint");
+        
+        // Fallback to old registration endpoint (requires pre-registration)
+        if (registeredDevice(mac, db.ezdata2.loginName, db.ezdata2.password, db.ezdata2.devToken)) {
+            log_w("registeredDevice success");
+            ezdataStatus = true;
         } else {
-            log_w("login error");
+            log_w("registeredDevice error");
+            log_i("Login ...");
+            db.ezdata2.loginName = "USER_" + mac;
+            db.ezdata2.password = "12345678";
+            if (login(db.ezdata2.loginName, db.ezdata2.password, db.ezdata2.devToken)) {
+                log_w("login success");
+                ezdataStatus = true;
+            } else {
+                log_w("login error");
+                ezdataStatus = false;
+            }
         }
     }
 
-    ezdataStatus = true;
     lastMillisecond = esp_timer_get_time() / 1000;
     db.saveToFile();
-
 }
 
 

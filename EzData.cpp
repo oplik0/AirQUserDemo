@@ -227,6 +227,48 @@ bool EzData::del() {
 }
 
 
+bool registerDevice(const String &mac, const String &deviceType, String &devToken) {
+    bool ret = false;
+    HTTPClient http;
+    char buf[256] = { 0 };
+    String url = String("http://") + gServer + String("/api/v2/device/registerMac");
+    DynamicJsonDocument doc(1024);
+
+    snprintf(buf, sizeof(buf) - 1, "{\"mac\": \"%s\", \"deviceType\": \"%s\"}", 
+             mac.c_str(), deviceType.c_str());
+
+    log_d("%s", buf);
+
+    http.begin(url);
+    http.addHeader("Content-Type", "application/json");
+    int httpCode = http.POST((uint8_t *)buf, strlen(buf));
+    if (httpCode == HTTP_CODE_OK) {
+        String rsp = http.getString();
+        log_d("rsp: %s", rsp.c_str());
+        DeserializationError error = deserializeJson(doc, rsp);
+        ret = false;
+        if (error) {
+            log_e("deserializeJson() failed: %s", error.c_str());
+            goto out;
+        }
+        int code = doc["code"].as<int>();
+        if (code == 200) {
+            ret = true;
+            devToken = doc["data"].as<String>();
+            log_d("Device Token: %s", devToken.c_str());
+        } else {
+            ret = false;
+            log_e("Registration failed (code %d): %s", code, doc["msg"].as<String>().c_str());
+        }
+    } else {
+        ret = false;
+        log_e("HTTP error: %d", httpCode);
+    }
+out:
+    http.end();
+    return ret;
+}
+
 bool registeredDevice(const String &mac, String &loginName, String &password, String &devToken) {
     bool ret = false;
     HTTPClient http;

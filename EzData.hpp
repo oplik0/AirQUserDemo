@@ -52,6 +52,8 @@ private:
     String _key = "";
 };
 
+bool registerDevice(const String &mac, const String &deviceType, String &devToken);
+
 bool registeredDevice(const String &mac, String &loginName, String &password, String &devToken);
 
 bool login(const String &loginName, const String &password, String &deviceToken);
